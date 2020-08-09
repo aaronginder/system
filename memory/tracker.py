@@ -7,44 +7,104 @@ class ProcessTracker:
         processes = []
 
         for process in psutil.process_iter():
-            processes.append(process)
+            pid = self._get_pid(process)
+            name = self._get_process_name(process)
+            create_time = self._get_create_time(process)
+            status = self._get_status(process)
+            priority = self._get_process_priority(process)
+            cores = self._get_process_cores(process)
+            cpu_usage = self._get_cpu_percent(process)
+            memory = self._get_memory_usage(process)
+            # read_bytes, read_count, write_bytes, write_count = self._get_process_io_bytes(process)
+            threads = self._get_threads_spawned(process)
+            user = self.get_user_who_spawned_process(process)
+
+            processes.append({
+                'pid': pid, 'name': name, 'create_time': create_time, 'cores': cores, 'cpu_usage': cpu_usage, 'status': status, 'priority': priority,
+                'memory_usage': memory,
+                # 'read_bytes': read_bytes, 'read_count': read_count, 'write_bytes': write_bytes, 'write_count': write_count,
+                'num_threads': threads, 'user': user
+            })
+
         
         return processes
 
-    def _get_create_time(self, process: psutil.Process):
+    @staticmethod
+    def _get_pid(process: psutil.Process):
+        return process.pid
+
+    @staticmethod
+    def _get_process_name(process: psutil.Process):
+        return process.name()
+
+    @staticmethod
+    def _get_create_time(process: psutil.Process):
         # create_time
-        pass
+        try:
+            create_time = datetime.fromtimestamp(process.create_time())
+        except OSError:
+            create_time = datetime.fromtimestamp(process.boot_time())
 
-    def _get_status():
+    @staticmethod
+    def _get_status(process: psutil.Process):
         # status = process.status()
-        pass
+        return process.status()
 
-    def _get_process_priority(self):
+    @staticmethod
+    def _get_process_priority(process: psutil.Process):
         # nice = int(process.nice())
-        pass
+        try:
+            nice = int(process.nice())
+        except psutil.AccessDenied:
+            nice = 0
 
-    def _get_process_cores(self):
+        return nice
+
+    @staticmethod
+    def _get_process_cores(process: psutil.Process):
         # cores = len(process.cpu_affinity)
-        pass
+        try:
+            core = len(process.cpu_affinity())
+        except psutil.AccessDenied:
+            cores = 0
 
-    def _get_memory_usage(self):
+    @staticmethod
+    def _get_cpu_percent(process: psutil.Process):
+        return process.cpu_percent()
+
+    @staticmethod
+    def _get_memory_usage(process: psutil.Process):
         # memory_usage = process.memory_full_info().uss
-        pass
+        try:
+            memory_usage = process.memory_full_info().uss
+        except psutil.AccessDenied:
+            memory_usage = 0
 
-    def _get_process_io_bytes(self, process):
+        return memory_usage
+
+    @staticmethod
+    def _get_process_io_bytes(process: psutil.Process):
         # io_counters, read_bytes, writes_byte
-        pass
+        return process.io_counters()
 
-    def _get_threads_spawned(self, process):
+    @staticmethod
+    def _get_threads_spawned(process: psutil.Process):
         # n_threads = process.num_threads()
-        pass
+        return process.num_threads()
 
-    def get_user_who_spawned_process(self, process):
+    @staticmethod
+    def get_user_who_spawned_process(process: psutil.Process):
         # username = process.username()
-        pass
+        try:
+            user = process.username()
+        except psutil.AccessDenied:
+            user = "N/A"
+
+        return user
 
 class ProcessConstructor:
 
+    @staticmethod
     def get_formatted_size(bytes):
         for unit in ['', 'K', 'M', 'G', 'T', 'O']:
             if bytes < 1024:
@@ -54,5 +114,4 @@ class ProcessConstructor:
 
 tracker = ProcessTracker()
 processes=tracker.get_process_info()
-
-print(processes[0].name())
+print(processes)
